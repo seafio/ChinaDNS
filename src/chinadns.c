@@ -133,6 +133,8 @@ static float empty_result_delay = EMPTY_RESULT_DELAY;
 static int local_sock;
 static int remote_sock;
 static int daemon_mode = 0;
+static char *logfile = NULL;
+static char *pidfile = NULL;
 
 static void usage(void);
 
@@ -192,27 +194,9 @@ int main(int argc, char **argv) {
     return EXIT_FAILURE;
 
   if (daemon_mode) {
-#ifndef __APPLE__
-        daemon (1, 0);
-#else   /* __APPLE */
-        /* daemon is deprecated under APPLE
-         * use fork() instead
-         * */
-        switch (fork ()) {
-          case -1:
-              printf ("Failed to daemonize\n");
-              exit (-1);
-              break;
-          case 0:
-              /* all good*/
-              break;
-          default:
-              /* kill origin process */
-              exit (0);
-        }
-#endif  /* __APPLE */
+      daemon_start(logfile, pidfile);
   }
-  
+
   max_fd = MAX(local_sock, remote_sock) + 1;
   while (1) {
     FD_ZERO(&readset);
@@ -264,13 +248,19 @@ static int setnonblock(int sock) {
 
 static int parse_args(int argc, char **argv) {
   int ch;
-  while ((ch = getopt(argc, argv, "hb:p:s:l:c:y:dmvVD")) != -1) {
+  while ((ch = getopt(argc, argv, "hb:p:s:l:c:y:L:P:dmvVD")) != -1) {
     switch (ch) {
       case 'h':
         usage();
         exit(0);
       case 'D':
         daemon_mode = 1;
+        break;
+      case 'L':
+        logfile = strdup(optarg);
+        break;
+      case 'P':
+        pidfile = strdup(optarg);
         break;
       case 'b':
         listen_addr = strdup(optarg);
@@ -940,5 +930,3 @@ Forward DNS requests.\n\
 \n\
 Online help: <https://github.com/clowwindy/ChinaDNS>\n");
 }
-
-
